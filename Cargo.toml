@@ -1,0 +1,12 @@
+[package]
+name = "ndoxide"
+version = "0.1.0"
+authors = ["axect <axect@outlook.kr>"]
+edition = "2018"
+license = "MIT"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ndarray = "0.12"
+num-traits = "0.2"
