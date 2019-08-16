@@ -4,8 +4,6 @@ use ndarray::prelude::*;
 use ndoxide::prelude::*;
 
 fn main() {
-    let a: Matrix<f64> = zeros(10, 10);
-    let b: Matrix<f64> = eye(5);
-    println!("{}", a);
-    println!("{}", b);
+    let a: Matrix<f64> = zeros(5000, 5000);
+    println!("{}", a.norm(PQ(1,2)));
 }
