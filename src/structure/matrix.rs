@@ -2,10 +2,99 @@ use std::ops::Add;
 use ndarray::Array2;
 use num_traits::{Num, Float};
 use crate::structure::vector::Vector;
-use crate::mathematics::linear_algebra::{LinearAlgebra, Norm, Perms};
+use crate::mathematics::linear_algebra::{LinearAlgebra, Norm, Perms, MinimalMatrix};
 use crate::mathematics::linear_algebra::Norm::*;
+use crate::util::matlab_fn::zeros;
 
 pub type Matrix<T> = Array2<T>;
+
+impl<T: Num + Copy + Clone> MinimalMatrix for Matrix<T> {
+    fn swap_row(&mut self, row1: usize, row2: usize) {
+        let temp1: Vector<T> = self.row(row1).to_owned();
+        let temp2: Vector<T> = self.row(row2).to_owned();
+        self.row_mut(row1).zip_mut_with(&temp2, |x, y| *x = *y);
+        self.row_mut(row2).zip_mut_with(&temp1, |x, y| *x = *y);
+    }
+
+    fn swap_col(&mut self, col1: usize, col2: usize) {
+        let temp1: Vector<T> = self.column(col1).to_owned();
+        let temp2: Vector<T> = self.column(col2).to_owned();
+        self.column_mut(col1).zip_mut_with(&temp2, |x, y| *x = *y);
+        self.column_mut(col2).zip_mut_with(&temp1, |x, y| *x = *y);
+    }
+
+    fn block(&self) -> (Self, Self, Self, Self) {
+        let r = self.rows();
+        let c = self.cols();
+        let l_r = r / 2;
+        let l_c = c / 2;
+        let r_l = r - l_r;
+        let c_l = c - l_c;
+
+        let mut m1: Matrix<T> = zeros(l_r, l_c);
+        let mut m2: Matrix<T> = zeros(l_r, c_l);
+        let mut m3: Matrix<T> = zeros(r_l, l_c);
+        let mut m4: Matrix<T> = zeros(r_l, c_l);
+
+        for idx_row in 0..r {
+            for idx_col in 0..c {
+                match (idx_row, idx_col) {
+                    (i, j) if (i < l_r) && (j < l_c) => {
+                        m1[[i, j]] = self[[i, j]];
+                    }
+                    (i, j) if (i < l_r) && (j >= l_c) => {
+                        m2[[i, j - l_c]] = self[[i, j]];
+                    }
+                    (i, j) if (i >= l_r) && (j < l_c) => {
+                        m3[[i - l_r, j]] = self[[i, j]];
+                    }
+                    (i, j) if (i >= l_r) && (j >= l_c) => {
+                        m4[[i - l_r, j - l_c]] = self[[i, j]];
+                    }
+                    _ => (),
+                }
+            }
+        }
+        (m1, m2, m3, m4)
+    }
+
+    fn combine(m1: Self, m2: Self, m3: Self, m4: Self) -> Self {
+        let l_r = m1.rows();
+        let l_c = m1.cols();
+        let c_l = m2.cols();
+        let r_l = m3.rows();
+
+        let r = l_r + r_l;
+        let c = l_c + c_l;
+
+        let mut m: Matrix<T> = zeros(r, c);
+
+        for idx_row in 0..r {
+            for idx_col in 0..c {
+                match (idx_row, idx_col) {
+                    (i, j) if (i < l_r) && (j < l_c) => {
+                        m[[i, j]] = m1[[i, j]];
+                    }
+                    (i, j) if (i < l_r) && (j >= l_c) => {
+                        m[[i, j]] = m2[[i, j - l_c]];
+                    }
+                    (i, j) if (i >= l_r) && (j < l_c) => {
+                        m[[i, j]] = m3[[i - l_r, j]];
+                    }
+                    (i, j) if (i >= l_r) && (j >= l_c) => {
+                        m[[i, j]] = m4[[i - l_r, j - l_c]];
+                    }
+                    _ => (),
+                }
+            }
+        }
+        m
+    }
+}
+
+pub fn combine<T: Num + Copy + Clone>(m1: Matrix<T>, m2: Matrix<T>, m3: Matrix<T>, m4: Matrix<T>) -> Matrix<T> {
+    MinimalMatrix::combine(m1, m2, m3, m4)
+}
 
 impl<T: Num + Float + Clone> LinearAlgebra<T> for Matrix<T> {
     fn norm(&self, norm: Norm) -> T {
@@ -48,6 +137,43 @@ impl<T: Num + Float + Clone> LinearAlgebra<T> for Matrix<T> {
     }
 
     fn lu(&self) -> Option<(Perms, Perms, Self, Self)> {
+        assert_eq!(self.cols(), self.rows());
+        let n = self.rows();
+        let len = n * n;
+
+        let mut l: Matrix<T> = zeros(n, n);
+        let mut u: Matrix<T> = zeros(n, n);
+
+        let mut p: Perms = Vec::new();
+        let mut q: Perms = Vec::new();
+
+        let mut container: Matrix<T> = self.clone();
+
+        for k in 0..(n - 1) {
+            // Initialize maximum & Position
+            let mut m = T::zero();
+            let mut row_idx: usize = k;
+            let mut col_idx: usize = k;
+            // Find Maximum value & Position
+            for i in k..n {
+                for j in k..n {
+                    let temp = container[(i, j)];
+                    if temp.abs() > m.abs() {
+                        m = temp;
+                        row_idx = i;
+                        col_idx = j;
+                    }
+                }
+            }
+            if k != row_idx {
+                container.swap_row(k, row_idx); // Row perm
+                p.push((k, row_idx));
+            }
+            if k != col_idx {
+                container.swap_col(k, col_idx); // Col perm
+                q.push((k, col_idx));
+            }
+        }
         unimplemented!()
     }
 

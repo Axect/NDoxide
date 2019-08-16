@@ -4,6 +4,11 @@ use ndarray::prelude::*;
 use ndoxide::prelude::*;
 
 fn main() {
-    let a: Matrix<f64> = zeros(5000, 5000);
-    println!("{}", a.norm(PQ(1,2)));
+    let mut a: Matrix<usize> = zeros(5, 5);
+    a[(0,1)] = 1;
+    println!("{}", a);
+    a.swap_row(0, 1);
+    println!("{}", a);
+    a.swap_col(0, 1);
+    println!("{}", a);
 }

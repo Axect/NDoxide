@@ -1,10 +1,14 @@
 pub use crate::num_traits::Num;
 
-pub use crate::structure::matrix::Matrix;
+pub use crate::structure::matrix::{
+    Matrix,
+    combine,
+};
 pub use crate::structure::vector::Vector;
 pub use crate::mathematics::linear_algebra::{
     Perms,
     LinearAlgebra,
+    MinimalMatrix,
     Norm,
     Norm::{
         Frobenius,
