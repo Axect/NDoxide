@@ -1,5 +1,5 @@
 use std::ops::Add;
-use ndarray::Array2;
+use ndarray::{Array2, ArrayView2};
 use num_traits::{Num, Float};
 use crate::structure::vector::Vector;
 use crate::mathematics::linear_algebra::{LinearAlgebra, Norm, Perms, MinimalMatrix};
@@ -7,6 +7,7 @@ use crate::mathematics::linear_algebra::Norm::*;
 use crate::util::matlab_fn::zeros;
 
 pub type Matrix<T> = Array2<T>;
+pub type MatrixView<'a, T> = ArrayView2<'a, T>;
 
 impl<T: Num + Copy + Clone> MinimalMatrix for Matrix<T> {
     fn swap_row(&mut self, row1: usize, row2: usize) {
@@ -144,6 +145,10 @@ impl<T: Num + Float + Clone> LinearAlgebra<T> for Matrix<T> {
         let mut l: Matrix<T> = zeros(n, n);
         let mut u: Matrix<T> = zeros(n, n);
 
+        // ---------------------------------------
+        // Pivoting - Complete
+        // ---------------------------------------
+        // Permutations
         let mut p: Perms = Vec::new();
         let mut q: Perms = Vec::new();
 
@@ -174,7 +179,44 @@ impl<T: Num + Float + Clone> LinearAlgebra<T> for Matrix<T> {
                 q.push((k, col_idx));
             }
         }
-        unimplemented!()
+
+        // ---------------------------------------
+        // Obtain L & U
+        // ---------------------------------------
+        let reference: MatrixView<T> = container.view();
+
+        // Initialize U
+        for i in 0..n {
+            u[(0, i)] = reference[(0, i)];
+        }
+
+        // Initialize L
+        for i in 0..n {
+            l[(i, i)] = T::one();
+        }
+
+        for i in 0..n {
+            for k in i..n {
+                let mut s = T::zero();
+                for j in 0..i {
+                    s = s + l[(i, j)] * u[(j, k)];
+                }
+                u[(i, k)] = reference[(i, k)] - s;
+                // Check non-zero diagonal
+                if u[(i, i)] == T::zero() {
+                    return None;
+                }
+            }
+
+            for k in (i + 1)..n {
+                let mut s = T::zero();
+                for j in 0..i {
+                    s = s + l[(k, j)] * u[(j, i)];
+                }
+                l[(k, i)] = (reference[(k, i)] - s) / u[(i, i)];
+            }
+        }
+        Some((p, q, l, u))
     }
 
     fn det(&self) -> T {
