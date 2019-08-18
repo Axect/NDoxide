@@ -1,5 +1,3 @@
-use crate::structure::vector::Vector;
-
 pub trait MinimalMatrix: Sized {
     fn swap_row(&mut self, row1: usize, row2: usize);
     fn swap_col(&mut self, col1: usize, col2: usize);

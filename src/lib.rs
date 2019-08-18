@@ -1,5 +1,6 @@
 extern crate ndarray;
 extern crate num_traits;
+extern crate rand;
 
 pub mod structure;
 pub mod util;

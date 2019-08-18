@@ -1,7 +1,6 @@
-use std::ops::Add;
-use ndarray::{Array2, ArrayView2};
+use ndarray::{Array2, ArrayView2, arr2, FixedInitializer};
 use num_traits::{Num, Float};
-use crate::structure::vector::Vector;
+use crate::structure::vector::{Vector, MissingVector};
 use crate::mathematics::linear_algebra::{LinearAlgebra, Norm, Perms, MinimalMatrix};
 use crate::mathematics::linear_algebra::Norm::*;
 use crate::util::matlab_fn::zeros;
@@ -140,7 +139,6 @@ impl<T: Num + Float + Clone> LinearAlgebra<T> for Matrix<T> {
     fn lu(&self) -> Option<(Perms, Perms, Self, Self)> {
         assert_eq!(self.cols(), self.rows());
         let n = self.rows();
-        let len = n * n;
 
         let mut l: Matrix<T> = zeros(n, n);
         let mut u: Matrix<T> = zeros(n, n);
@@ -220,7 +218,19 @@ impl<T: Num + Float + Clone> LinearAlgebra<T> for Matrix<T> {
     }
 
     fn det(&self) -> T {
-        unimplemented!()
+        assert_eq!(self.rows(), self.cols());
+        match self.lu() {
+            None => T::zero(),
+            Some(pqlu) => {
+                let (p, q, _l, u) = pqlu;
+
+                // sgn of perms
+                let sgn_p = T::from(2.0 * (p.len() % 2) as f64 - 1.0).unwrap();
+                let sgn_q = T::from(2.0 * (q.len() % 2) as f64 - 1.0).unwrap();
+
+                u.diag().mul() * sgn_p * sgn_q
+            }
+        }
     }
 
     fn inv(&self) -> Option<Self> {
@@ -230,4 +240,10 @@ impl<T: Num + Float + Clone> LinearAlgebra<T> for Matrix<T> {
     fn pseudo_inv(&self) -> Option<Self> {
         unimplemented!()
     }
+}
+
+pub fn mat<T: Num + Clone, V: FixedInitializer<Elem=T>>(arr: &[V]) -> Matrix<T> 
+where V: Clone
+{
+    arr2(arr)
 }
