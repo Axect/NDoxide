@@ -14,7 +14,7 @@ pub use crate::structure::vector::{
 pub use crate::mathematics::linear_algebra::{
     Perms,
     LinearAlgebra,
-    MinimalMatrix,
+    MissingMatrix,
     Norm,
     Norm::{
         Frobenius,

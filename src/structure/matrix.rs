@@ -1,14 +1,14 @@
 use ndarray::{Array2, ArrayView2, arr2, FixedInitializer};
 use num_traits::{Num, Float};
 use crate::structure::vector::{Vector, MissingVector};
-use crate::mathematics::linear_algebra::{LinearAlgebra, Norm, Perms, MinimalMatrix};
+use crate::mathematics::linear_algebra::{LinearAlgebra, Norm, Perms, MissingMatrix};
 use crate::mathematics::linear_algebra::Norm::*;
 use crate::util::matlab_fn::zeros;
 
 pub type Matrix<T> = Array2<T>;
 pub type MatrixView<'a, T> = ArrayView2<'a, T>;
 
-impl<T: Num + Copy + Clone> MinimalMatrix for Matrix<T> {
+impl<T: Num + Copy + Clone> MissingMatrix<T> for Matrix<T> {
     fn swap_row(&mut self, row1: usize, row2: usize) {
         let temp1: Vector<T> = self.row(row1).to_owned();
         let temp2: Vector<T> = self.row(row2).to_owned();
@@ -21,6 +21,42 @@ impl<T: Num + Copy + Clone> MinimalMatrix for Matrix<T> {
         let temp2: Vector<T> = self.column(col2).to_owned();
         self.column_mut(col1).zip_mut_with(&temp2, |x, y| *x = *y);
         self.column_mut(col2).zip_mut_with(&temp1, |x, y| *x = *y);
+    }
+
+    fn map_row<F>(&self, f: F) -> Self where
+        F: Fn(Vector<T>) -> Vector<T> {
+        let mut result: Matrix<T> = zeros(self.rows(), self.cols());
+        let mut i = 0usize;
+        for v in self.genrows() {
+            result.row_mut(i).assign(&v);
+            i += 1;
+        }
+        result
+    }
+
+    fn map_col<F>(&self, f: F) -> Self where
+        F: Fn(Vector<T>) -> Vector<T> {
+        let mut result: Matrix<T> = zeros(self.rows(), self.cols());
+        let mut i = 0usize;
+        for v in self.gencolumns() {
+            result.column_mut(i).assign(&v);
+            i += 1;
+        }
+        result
+    }
+
+    fn map_row_mut<F>(&mut self, f: F) where
+        F: Fn(Vector<T>) -> Vector<T> {
+        for v in self.genrows_mut() {
+            v = f(v);
+        }
+    }
+
+    fn map_col_mut<F>(&mut self, f: F) where
+        F: Fn(Vector<T>) -> Vector<T> {
+        for v in self.gencolumns_mut() {
+            v = f(v);
+        }
     }
 
     fn block(&self) -> (Self, Self, Self, Self) {
@@ -93,7 +129,7 @@ impl<T: Num + Copy + Clone> MinimalMatrix for Matrix<T> {
 }
 
 pub fn combine<T: Num + Copy + Clone>(m1: Matrix<T>, m2: Matrix<T>, m3: Matrix<T>, m4: Matrix<T>) -> Matrix<T> {
-    MinimalMatrix::combine(m1, m2, m3, m4)
+    MissingMatrix::combine(m1, m2, m3, m4)
 }
 
 impl<T: Num + Float + Clone> LinearAlgebra<T> for Matrix<T> {
